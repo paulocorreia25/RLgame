@@ -8,8 +8,8 @@ from  tensorflow.keras.models import Model
 import os
 import math
 import numpy as np
-from rl.agents import DQNAgent
-from rl.policy import BoltzmannQPolicy
+from rl.agents import DQNAgent, DDPGAgent
+from rl.policy import BoltzmannQPolicy, GreedyQPolicy
 from rl.memory import SequentialMemory
 import gym
 
@@ -145,147 +145,11 @@ class Game:
             self.move_map()
             time.sleep(1)
 
-class Game2:
-    def __init__(self):
-        self.visualize = False
-        self.symbols = {'empty': [1, 0, 0, 0, 0], 'food': [0, 1, 0, 0, 0], 'player': [0, 0, 1, 0, 0], 'wall': [0, 0, 0, 1, 0], 'mine': [0, 0, 0, 0, 1]}
-        self.x_pos = 2
-        self.food = 20
-        self.x_dim = 30
-        self.y_dim = 8
-        self.moves = 0
-        self.game_map = []
-        self.draw()
-        self.spawn_food(self.food)
-        self.player_pos = (int(self.x_dim / 2), self.y_dim-2)
-        self.lives = 3
-
-    def draw(self):
-        temp = []
-        for j in range(self.y_dim):
-            x = []
-            if j == 0 or j == self.y_dim - 1:
-                for i in range(self.x_dim):
-                    x.append(self.symbols['wall'])
-            else:
-                for i in range(self.x_dim):
-                    if i == 0 or i == self.x_dim - 1:
-                        x.append(self.symbols['wall'])
-                    else:
-                        x.append(self.symbols['empty'])
-            temp.append(x)
-        self.game_map = temp
-        #self.game_map[self.y_dim-2][self.x_pos] = self.symbols['player']
-
-    def spawn_food(self, amount):
-        n = amount
-        while n != 0:
-            x_rand, y_rand = random.randint(1, self.x_dim - 2), random.randint(1, self.y_dim - 2)
-            if self.game_map[y_rand][x_rand] == self.symbols['empty']:
-                self.game_map[y_rand][x_rand] = self.symbols['food']
-                n -= 1
-
-    def get_pos(self, item):
-        for y in range(self.y_dim):
-            for x in range(self.x_dim):
-                if self.game_map[y][x] == item:
-                    yield x, y
-
-    def spawn(self):
-        num = random.randint(1, 15)
-        if num == 1:
-            return self.symbols['food']
-        if num == 4 or num == 5:
-            return self.symbols['mine']
-        return self.symbols['empty']
-
-    def move_map(self):
-        temp = []
-        for i, x in enumerate(self.game_map):
-            if i != 0 and i != self.y_dim-1:
-                player = list(self.get_pos(self.symbols['player']))[0]
-                if i != player[1]:
-                    food = self.spawn()
-                    temp.append([self.symbols['wall'], *x[2:-1], food, self.symbols['wall']])
-                else:
-                    food = self.spawn()
-                    temp2 = [self.symbols['wall'], *x[2:-1], food, self.symbols['wall']]
-                    temp2[temp2.index(self.symbols['player'])] = self.symbols['empty']
-                    temp2[self.x_pos] = self.symbols['player']
-                    temp.append(temp2)
-            else:
-                temp.append(x)
-        self.game_map = temp
-
-    def reset(self):
-        self.moves = 0
-        self.draw()
-        self.spawn_food(self.food)
-        return np.array(self.game_map, dtype='float32')
-
-    def step(self, action):
-        if self.visualize:
-            self.render()
-            time.sleep(.5)
-        acts = [(1, 0), (-1, 0), (0, 1), (0, -1)]
-        y = acts[action][1]
-        x = acts[action][0]
-
-        reward = 0
-        if self.game_map[self.player_pos[1] + y][self.player_pos[0] + x] == self.symbols['food']:
-            reward = 12
-        if self.game_map[self.player_pos[1] + y][self.player_pos[0] + x] == self.symbols['mine'] or self.game_map[self.player_pos[1] + y][self.player_pos[0] + x] == self.symbols['wall']:
-            reward = -24
-            self.lives -= 1
-        if all(self.game_map[self.player_pos[1] + y - 1: self.player_pos[1] + y + 1][self.player_pos[0] + x + 1] == self.symbols['mine']):
-            reward = -6
-
-        self.move(x, y)
-        self.moves += 1
-        done = (self.lives == 0)
-        return np.array(self.game_map, dtype='float32'), reward, done, {}
-
-    def move(self, x, y):
-        y = y if self.player_pos[1] + y != 0 and self.player_pos[1] + y != self.y_dim - 1 else 0
-        x = x if self.player_pos[0] + x != 0 and self.player_pos[0] + x != self.x_dim - 1 else 0
-        if self.player_pos[1] + y != self.y_dim - 1 and self.player_pos[1] + y != 0:
-            self.game_map[self.player_pos[1]][self.player_pos[0]] = self.symbols['empty']
-            self.game_map[self.player_pos[1] + y][self.player_pos[0] + x] = self.symbols['player']
-            self.player_pos = (self.player_pos[0] + x, self.player_pos[1] + y)
-
-    def render(self):
-        translate = {str(self.symbols['empty']): ' ', str(self.symbols['food']): 'O', str(self.symbols['player']): 'X', str(self.symbols['wall']): '#', str(self.symbols['mine']): '!'}
-        os.system('cls')
-        for n in self.game_map:
-            k = ''
-            for m in n:
-                k += translate[str(m)]
-            print(k)
-        print(self.moves)
-
-    def run(self):
-        while True:
-            self.move_map()
-            time.sleep(1)
 
 game = Game()
 
 
-def res(x):
-    shape = x.shape
-
-
-    # 1 possibility: H,W*channel
-    reshape = Reshape((shape[1], shape[2] * shape[3]))(x)
-
-    # 2 possibility: W,H*channel
-    # transpose = Permute((2,1,3))(x)
-    # reshape = Reshape((shape[1],shape[2]*shape[3]))(transpose)
-    print(reshape.shape)
-    return reshape
-
-
-def build_model(states, actions):
+def build_model(actions):
     shape = np.array(game.game_map, dtype='float32').shape
     print(shape)
     model = Sequential()
@@ -299,16 +163,16 @@ def build_model(states, actions):
 
 
 def build_agent(model, actions):
-    policy = BoltzmannQPolicy()
+    policy = GreedyQPolicy()
     memory = SequentialMemory(limit=1000, window_length=1)
     dqn = DQNAgent(model=model, memory=memory, policy=policy, nb_actions=actions, nb_steps_warmup=100, target_model_update=1e-2)
     return dqn
 
 
-model = build_model(12, 3)
+model = build_model(3)
 dqn = build_agent(model, 3)
 dqn.compile(Adam(learning_rate=1e-3), metrics=['mae'])
-dqn.fit(game, nb_steps=5000, visualize=False, verbose=1)
+dqn.fit(game, nb_steps=20000, visualize=False, verbose=1)
 
 game.visualize = True
 
