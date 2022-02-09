@@ -2,16 +2,14 @@ import random
 import time
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Flatten, Conv2D, MaxPooling2D, InputLayer, Input, Reshape, ConvLSTM2D, LSTM, Lambda, Dropout
+from tensorflow.keras.layers import Dense, Flatten, Conv2D, MaxPooling2D, Reshape
 from tensorflow.keras.optimizers import Adam
-from  tensorflow.keras.models import Model
+from tensorflow.keras.models import Model
 import os
-import math
 import numpy as np
-from rl.agents import DQNAgent, DDPGAgent
-from rl.policy import BoltzmannQPolicy, GreedyQPolicy
+from rl.agents import DQNAgent
+from rl.policy import BoltzmannQPolicy
 from rl.memory import SequentialMemory
-import gym
 
 tf.compat.v1.experimental.output_all_intermediates(True)
 
@@ -163,7 +161,7 @@ def build_model(actions):
 
 
 def build_agent(model, actions):
-    policy = GreedyQPolicy()
+    policy = BoltzmannQPolicy()
     memory = SequentialMemory(limit=1000, window_length=1)
     dqn = DQNAgent(model=model, memory=memory, policy=policy, nb_actions=actions, nb_steps_warmup=100, target_model_update=1e-2)
     return dqn
